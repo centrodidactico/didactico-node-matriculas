@@ -1,0 +1,14 @@
+# Datos personales: nunca subir exportaciones de Stylus ni ficheros generados
+input/
+export/
+*.xml
+*.xlsx
+*.pdf
+
+# Versión antigua en Node (solo referencia local)
+legacy/
+node_modules/
+
+# Sistema
+.DS_Store
+Thumbs.db

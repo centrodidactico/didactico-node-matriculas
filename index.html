@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Listados de matrícula · Secretaría · Centro Didáctico</title>
+  <meta name="description" content="Herramienta de Secretaría: genera hojas de asistencia en PDF y listados en Excel a partir del matriculas.xml de Stylus. Todo se procesa en el navegador.">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,700&family=Schibsted+Grotesk:ital,wght@0,700;0,800;1,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="announce">
+    <div class="wrap announce__inner">
+      <span class="announce__dot" aria-hidden="true"></span>
+      <strong>Herramienta de Secretaría</strong>
+      <span class="announce__sep">·</span>
+      <span>El fichero se procesa en tu navegador y no se envía a ningún servidor</span>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="wrap header__inner">
+      <a class="brand" href="./" aria-label="Centro Didáctico · Listados de matrícula">
+        <img class="site-logo" src="assets/logo.png" alt="" width="52" height="52">
+        <span>
+          <span class="brand__name">CENTRO <span>DIDÁCTICO</span></span>
+          <span class="brand__tag">Centro concertado · Formación Profesional</span>
+        </span>
+      </a>
+      <div class="header__cta">
+        <span class="chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+          Secretaría · Listados de matrícula
+        </span>
+        <button class="btn btn--outline btn--sm" id="btn-reset" type="button" hidden>Cargar otro fichero</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Paso 1: cargar el fichero -->
+    <section id="paso-carga" class="page-hero">
+      <div class="page-hero__bg" aria-hidden="true"></div>
+      <div class="wrap page-hero__inner">
+        <div>
+          <span class="eyebrow">Secretaría · Stylus</span>
+          <h1>Listados de matrícula <em>en un clic</em></h1>
+          <p class="page-hero__lead">Arrastra el fichero <code>matriculas.xml</code> exportado desde Stylus y descarga las hojas de asistencia semanal en PDF o el listado completo del alumnado en Excel.</p>
+          <div class="hero__features">
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+              <span>Una hoja de asistencia por ciclo, curso y grupo <span>· PDF listo para imprimir</span></span>
+            </div>
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3z"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>
+              <span>Listado completo ordenable y filtrable <span>· exportable a Excel con autofiltro</span></span>
+            </div>
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+              <span>Sin instalar nada <span>· los datos no salen de tu navegador</span></span>
+            </div>
+          </div>
+        </div>
+        <div>
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Arrastra aquí matriculas.xml o pulsa para elegir el archivo">
+          <svg class="dz-icon" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M14 40h20a6 6 0 0 0 6-6V18L28 6H14a6 6 0 0 0-6 6v22a6 6 0 0 0 6 6z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+            <path d="M28 6v12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+            <path d="M24 20v14m0-14-5 5m5-5 5 5" fill="none" stroke="#f4c20d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <strong>Arrastra aquí <span class="mono">matriculas.xml</span></strong>
+          <span class="dz-or">o</span>
+          <button class="btn btn--accent" id="btn-elegir" type="button">Elegir archivo</button>
+          <input type="file" id="file-input" accept=".xml,text/xml,application/xml" hidden>
+          <p class="dz-hint">Exportación de Stylus · XML en ISO-8859-1 o UTF-8</p>
+          <div class="dz-loading" id="dz-loading" hidden><span class="spinner"></span> Leyendo matrículas…</div>
+        </div>
+        <div id="error" class="note note--error" role="alert" hidden>
+          <span class="note__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></span>
+          <div class="note__body"><p id="error-text"></p></div>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paso 2: resultados -->
+    <section id="resultado" class="wrap" hidden>
+      <div class="stats" id="summary"></div>
+
+      <div id="aviso-sin-grupo" class="note note--warn" hidden>
+        <span class="note__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        <div class="note__body" id="aviso-sin-grupo-body"></div>
+      </div>
+
+      <nav class="tabs__nav" role="tablist">
+        <button type="button" role="tab" class="tab is-active" data-tab="asistencia" aria-selected="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+          Hojas de asistencia
+        </button>
+        <button type="button" role="tab" class="tab" data-tab="listado" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3z"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>
+          Listado completo
+        </button>
+      </nav>
+
+      <!-- Hojas de asistencia -->
+      <section id="tab-asistencia" class="tab-panel panel" role="tabpanel">
+        <div class="toolbar">
+          <label class="field">
+            <span>Sesiones por día</span>
+            <input type="number" id="opt-sesiones" value="6" min="1" max="10">
+          </label>
+          <label class="field">
+            <span>Días</span>
+            <select id="opt-dias">
+              <option value="5">Lunes a viernes</option>
+              <option value="6">Lunes a sábado</option>
+            </select>
+          </label>
+          <span class="spacer"></span>
+          <span class="count" id="sel-count"></span>
+          <button class="btn btn--accent" id="btn-pdf" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4M5 20h14"/></svg>
+            Descargar PDF
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table id="tabla-grupos" class="tabla">
+            <thead>
+              <tr>
+                <th class="chk"><input type="checkbox" id="chk-all" checked aria-label="Seleccionar todos los grupos"></th>
+                <th>Clave</th>
+                <th>Ciclo formativo</th>
+                <th>Curso</th>
+                <th>Grupo</th>
+                <th>Turno</th>
+                <th class="num">Alumnos</th>
+                <th class="act"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="hint">Marca los grupos que quieras incluir y pulsa «Descargar PDF» para obtener un único documento con todas las hojas. El botón de cada fila descarga solo esa hoja.</p>
+      </section>
+
+      <!-- Listado completo -->
+      <section id="tab-listado" class="tab-panel panel" role="tabpanel" hidden>
+        <div class="toolbar">
+          <label class="field"><span>Ciclo</span><select id="f-ciclo"><option value="">Todos</option></select></label>
+          <label class="field"><span>Curso</span><select id="f-curso"><option value="">Todos</option></select></label>
+          <label class="field"><span>Grupo</span><select id="f-grupo"><option value="">Todos</option></select></label>
+          <label class="field"><span>Turno</span><select id="f-turno"><option value="">Todos</option></select></label>
+          <label class="field grow"><span>Buscar</span><input type="search" id="f-q" placeholder="Apellidos, nombre, documento, email, teléfono…"></label>
+        </div>
+        <div class="toolbar toolbar--center">
+          <span class="count" id="list-count"></span>
+          <button class="btn btn--outline btn--xs" id="btn-limpiar" type="button">Limpiar filtros</button>
+          <span class="spacer"></span>
+          <button class="btn btn--outline btn--sm" id="btn-columnas" type="button" aria-expanded="false">Columnas</button>
+          <label class="check"><input type="checkbox" id="opt-solo-visibles"> Exportar solo las columnas visibles</label>
+          <button class="btn btn--accent" id="btn-xlsx" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4M5 20h14"/></svg>
+            Descargar Excel
+          </button>
+        </div>
+        <div id="col-chooser" class="col-chooser" hidden></div>
+        <div class="table-wrap table-wrap--tall">
+          <table id="tabla-alumnos" class="tabla sortable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="hint">Pulsa en una cabecera para ordenar (segunda pulsación: orden inverso). El Excel respeta el filtro y el orden actual e incluye además las hojas «Grupos» y «Módulos».</p>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <strong>Centro Didáctico · Secretaría</strong>
+      <span class="announce__sep">·</span>
+      <span>Los datos solo viven en esta pestaña: recárgala o ciérrala para borrarlos.</span>
+    </div>
+  </footer>
+
+  <div class="drop-overlay" id="drop-overlay" hidden><div>Suelta el fichero para cargarlo</div></div>
+
+  <script src="vendor/jspdf.umd.min.js" defer></script>
+  <script src="vendor/exceljs.min.js" defer></script>
+  <script src="assets/matriculas.js" defer></script>
+  <script src="assets/columnas.js" defer></script>
+  <script src="assets/hoja-asistencia.js" defer></script>
+  <script src="assets/listado-xlsx.js" defer></script>
+  <script src="assets/app.js" defer></script>
+</body>
+</html>
