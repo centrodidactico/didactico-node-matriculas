@@ -138,7 +138,7 @@
     const ciclos = new Set(m.matriculas.map((x) => x.cicloClave || x.cicloNombre)).size;
     const stats = [
       { k: 'Centro', v: m.centro || '—', text: true, wide: true },
-      { k: 'Curso académico', v: m.cursoAcademico || '—' },
+      { k: 'Curso', v: m.cursoAcademico || '—', text: true },
       { k: 'Matrículas', v: m.matriculas.length },
       { k: 'Alumnos', v: alumnos },
       { k: 'Ciclos', v: ciclos },
