@@ -311,6 +311,95 @@
     return [...set].sort((a, b) => a.localeCompare(b, 'es'));
   }
 
+  /* ---------- Exportación de un XML filtrado ---------- */
+
+  // Comentario, CDATA, <?…?>/<!…>, o etiqueta de elemento (apertura, cierre o autocierre).
+  const RE_MARCA =
+    /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[?!][^>]*>|<(\/?)([^\s/>]+)(?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*(\/?)>/g;
+
+  /**
+   * Posiciones [inicio, fin) en el texto original de cada <matricula> hija de la raíz,
+   * en el mismo orden que parseMatriculas().matriculas.
+   */
+  function localizarMatriculas(xmlText) {
+    const re = new RegExp(RE_MARCA.source, 'g');
+    const bloques = [];
+    let depth = 0;
+    let inicio = -1;
+    let m;
+    while ((m = re.exec(xmlText))) {
+      const nombre = m[2];
+      if (!nombre) continue;
+      if (m[1]) {
+        depth -= 1;
+        if (depth === 1 && nombre === 'matricula' && inicio >= 0) {
+          bloques.push([inicio, re.lastIndex]);
+          inicio = -1;
+        }
+      } else if (m[3]) {
+        if (depth === 1 && nombre === 'matricula') bloques.push([m.index, re.lastIndex]);
+      } else {
+        if (depth === 1 && nombre === 'matricula') inicio = m.index;
+        depth += 1;
+      }
+    }
+    return bloques;
+  }
+
+  /**
+   * Devuelve el XML original quitando las matrículas que no se conservan. Se recorta el
+   * texto en lugar de reserializar el DOM para que la estructura, el formato y la
+   * declaración <?xml … encoding?> queden exactamente como los exportó Stylus.
+   * @param {string} xmlText texto completo del fichero original
+   * @param {boolean[]} conservar uno por matrícula, en orden del documento
+   */
+  function recortarXml(xmlText, conservar) {
+    const bloques = localizarMatriculas(xmlText);
+    if (bloques.length !== conservar.length) {
+      throw new Error('No se han podido localizar las matrículas dentro del XML original.');
+    }
+    let out = '';
+    let pos = 0;
+    bloques.forEach(([ini, fin], i) => {
+      if (conservar[i]) return;
+      let desde = ini;
+      while (desde > pos && /\s/.test(xmlText[desde - 1])) desde -= 1; // quita también su sangría
+      out += xmlText.slice(pos, desde);
+      pos = fin;
+    });
+    return out + xmlText.slice(pos);
+  }
+
+  /** Codifica el texto en la misma codificación que el fichero original (p. ej. ISO-8859-1). */
+  function codificarXml(texto, encoding) {
+    const utf8 = (t) => new TextEncoder().encode(t);
+    const label = (encoding || 'utf-8').toLowerCase();
+    if (label === 'utf-8' || label === 'utf8') return utf8(texto);
+
+    let tabla = null;
+    try {
+      const todos = new Uint8Array(256).map((_, i) => i);
+      const chars = new TextDecoder(label).decode(todos);
+      if (chars.length === 256) {
+        tabla = new Map();
+        for (let i = 0; i < 256; i += 1) if (!tabla.has(chars[i])) tabla.set(chars[i], i);
+      }
+    } catch (e) {
+      /* codificación no soportada: se pasa a UTF-8 */
+    }
+    if (!tabla) {
+      return utf8(texto.replace(/^(\s*<\?xml[^>]*?encoding\s*=\s*["'])[^"']+/, '$1UTF-8'));
+    }
+
+    const out = [];
+    for (const ch of texto) {
+      const b = tabla.get(ch);
+      if (b !== undefined) out.push(b);
+      else for (const c of `&#${ch.codePointAt(0)};`) out.push(c.charCodeAt(0));
+    }
+    return Uint8Array.from(out);
+  }
+
   return {
     decodeXml,
     sniffEncoding,
@@ -318,6 +407,9 @@
     aplicarAsignaciones,
     agruparClases,
     gruposDisponibles,
+    localizarMatriculas,
+    recortarXml,
+    codificarXml,
     asText,
     fechaEs,
     TURNOS,

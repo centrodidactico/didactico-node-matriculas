@@ -13,6 +13,7 @@
 
   const state = {
     fichero: '',
+    xml: null,
     model: null,
     clases: [],
     seleccion: new Set(),
@@ -20,6 +21,7 @@
     columnas: new Set(leerLS(LS_COLUMNAS, null) || Columnas.COLUMNAS.filter((c) => c.visible).map((c) => c.key)),
     sort: { key: null, dir: 'asc' },
     filtros: { ciclo: '', curso: '', grupo: '', turno: '', q: '' },
+    filtrosXml: { ciclo: '', curso: '', grupo: '', turno: '' },
     filas: [],
   };
 
@@ -69,6 +71,11 @@
   }
 
   function mostrarError(msg) {
+    // el aviso vive en el paso de carga: con los resultados en pantalla no se vería
+    if (msg && $('#paso-carga').hidden) {
+      alert(msg);
+      return;
+    }
     $('#error-text').textContent = msg;
     $('#error').hidden = !msg;
     if (msg) $('#error').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -76,6 +83,18 @@
 
   function cursoAcademicoSlug() {
     return (state.model && state.model.cursoAcademico ? state.model.cursoAcademico : '').replace('/', '-');
+  }
+
+  function sufijoFiltros(f) {
+    return [
+      f.ciclo,
+      f.curso ? `${f.curso}curso` : '',
+      f.grupo === '__sin__' ? 'sin-grupo' : f.grupo,
+      f.turno ? Matriculas.TURNOS[f.turno] || f.turno : '',
+    ]
+      .filter(Boolean)
+      .map(slug)
+      .join('_');
   }
 
   /* ---------- carga del fichero ---------- */
@@ -88,12 +107,15 @@
 
     try {
       const buffer = await file.arrayBuffer();
-      const { text } = Matriculas.decodeXml(buffer);
+      const { text, encoding } = Matriculas.decodeXml(buffer);
       const model = Matriculas.parseMatriculas(text, DOMParser);
       state.model = model;
+      state.xml = { text, encoding };
       state.fichero = file.name;
       state.sort = { key: null, dir: 'asc' };
       state.filtros = { ciclo: '', curso: '', grupo: '', turno: '', q: '' };
+      state.filtrosXml = { ciclo: '', curso: '', grupo: '', turno: '' };
+      $('#f-q').value = '';
       reconstruir(true);
       $('#paso-carga').hidden = true;
       $('#resultado').hidden = false;
@@ -116,12 +138,15 @@
     renderResumen();
     renderSinGrupo();
     renderGrupos();
-    rellenarFiltros();
+    rellenarFiltros('f', state.filtros);
     renderListado();
+    rellenarFiltros('x', state.filtrosXml);
+    renderXml();
   }
 
   function reiniciar() {
     state.model = null;
+    state.xml = null;
     state.clases = [];
     state.filas = [];
     $('#resultado').hidden = true;
@@ -268,9 +293,10 @@
     descargar(doc.output('blob'), nombre);
   }
 
-  /* ---------- listado ---------- */
+  /* ---------- filtros (listado y XML) ---------- */
 
-  function rellenarFiltros() {
+  // p: prefijo de los <select> (#f-… listado, #x-… XML); f: objeto de filtros que rellenan
+  function rellenarFiltros(p, f) {
     const ms = state.model.matriculas;
     const uniq = (fn) => [...new Set(ms.map(fn).filter(Boolean))];
     const ciclos = uniq((m) => m.cicloClave || m.cicloNombre)
@@ -282,23 +308,41 @@
     }));
     const turnos = uniq((m) => m.turno).sort().map((t) => ({ t, nombre: Matriculas.TURNOS[t] || t }));
 
-    llenarSelect($('#f-ciclo'), ciclos.map((c) => [c.clave, `${c.clave} · ${c.nombre}`]), state.filtros.ciclo);
-    llenarSelect($('#f-curso'), cursos.map((c) => [String(c.id), c.nombre]), state.filtros.curso);
-    llenarSelect($('#f-turno'), turnos.map((t) => [t.t, t.nombre]), state.filtros.turno);
-    rellenarGrupos();
+    llenarSelect($(`#${p}-ciclo`), ciclos.map((c) => [c.clave, `${c.clave} · ${c.nombre}`]), f.ciclo);
+    llenarSelect($(`#${p}-curso`), cursos.map((c) => [String(c.id), c.nombre]), f.curso);
+    llenarSelect($(`#${p}-turno`), turnos.map((t) => [t.t, t.nombre]), f.turno);
+    rellenarGrupos(p, f);
   }
 
-  function rellenarGrupos() {
+  function rellenarGrupos(p, f) {
     const ms = state.model.matriculas.filter(
       (m) =>
-        (!state.filtros.ciclo || (m.cicloClave || m.cicloNombre) === state.filtros.ciclo) &&
-        (!state.filtros.curso || String(m.cursoId) === state.filtros.curso)
+        (!f.ciclo || (m.cicloClave || m.cicloNombre) === f.ciclo) &&
+        (!f.curso || String(m.cursoId) === f.curso)
     );
     const grupos = [...new Set(ms.map((m) => m.grupo))].sort((a, b) => a.localeCompare(b, 'es'));
     const opts = grupos.map((g) => [g || '__sin__', g || '(sin grupo)']);
-    if (state.filtros.grupo && !opts.some(([v]) => v === state.filtros.grupo)) state.filtros.grupo = '';
-    llenarSelect($('#f-grupo'), opts, state.filtros.grupo);
+    if (f.grupo && !opts.some(([v]) => v === f.grupo)) f.grupo = '';
+    llenarSelect($(`#${p}-grupo`), opts, f.grupo);
   }
+
+  function leerFiltros(p, f) {
+    f.ciclo = $(`#${p}-ciclo`).value;
+    f.curso = $(`#${p}-curso`).value;
+    f.turno = $(`#${p}-turno`).value;
+    f.grupo = $(`#${p}-grupo`).value;
+    rellenarGrupos(p, f);
+  }
+
+  function cumpleFiltros(m, f) {
+    if (f.ciclo && (m.cicloClave || m.cicloNombre) !== f.ciclo) return false;
+    if (f.curso && String(m.cursoId) !== f.curso) return false;
+    if (f.grupo && (m.grupo || '__sin__') !== f.grupo) return false;
+    if (f.turno && m.turno !== f.turno) return false;
+    return true;
+  }
+
+  /* ---------- listado ---------- */
 
   function llenarSelect(sel, opciones, valor) {
     sel.innerHTML = `<option value="">Todos</option>${opciones
@@ -311,10 +355,7 @@
     const f = state.filtros;
     const q = f.q.trim().toLocaleLowerCase('es');
     let filas = state.model.matriculas.filter((m) => {
-      if (f.ciclo && (m.cicloClave || m.cicloNombre) !== f.ciclo) return false;
-      if (f.curso && String(m.cursoId) !== f.curso) return false;
-      if (f.grupo && (m.grupo || '__sin__') !== f.grupo) return false;
-      if (f.turno && m.turno !== f.turno) return false;
+      if (!cumpleFiltros(m, f)) return false;
       if (q) {
         const hay = [m.apellidosNombre, m.nombre, m.documento, m.cie, m.email, m.telefono1, m.telefono2, m.localidad]
           .join(' ')
@@ -419,14 +460,67 @@
       const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
-      const f = state.filtros;
-      const sufijo = [f.ciclo, f.curso ? `${f.curso}curso` : '', f.grupo === '__sin__' ? 'sin-grupo' : f.grupo].filter(Boolean).map(slug).join('_');
+      const sufijo = sufijoFiltros(state.filtros);
       descargar(blob, `listado-matriculas-${cursoAcademicoSlug()}${sufijo ? `-${sufijo}` : ''}.xlsx`);
     } catch (err) {
       console.error(err);
       mostrarError(`No se ha podido generar el Excel: ${err.message || err}`);
     } finally {
       btn.disabled = false;
+    }
+  }
+
+  /* ---------- exportar XML filtrado ---------- */
+
+  function renderXml() {
+    const ms = state.model.matriculas.filter((m) => cumpleFiltros(m, state.filtrosXml));
+    const clases = Matriculas.agruparClases(ms);
+    const tbody = $('#tabla-xml tbody');
+    tbody.innerHTML = clases.length
+      ? clases
+          .map((c) => {
+            const grupo = c.sinGrupo
+              ? '<span class="tag tag--warn">Sin grupo</span>'
+              : `<span class="tag">${esc(c.grupoNombre)}</span>`;
+            return `<tr>
+              <td class="muted">${esc(c.cicloClave)}</td>
+              <td class="strong">${esc(c.cicloNombre)}</td>
+              <td>${esc(c.cursoCorto)}</td>
+              <td>${grupo}</td>
+              <td class="muted">${esc(c.turnoNombre)}</td>
+              <td class="num">${c.alumnos.length}</td>
+            </tr>`;
+          })
+          .join('')
+      : '<tr><td class="empty" colspan="6">No hay matrículas que coincidan con el filtro.</td></tr>';
+
+    const n = ms.length;
+    const alumnos = new Set(ms.map((m) => m.id)).size;
+    $('#xml-count').textContent = n
+      ? `${n} matrícula${n === 1 ? '' : 's'} · ${alumnos} alumno${alumnos === 1 ? '' : 's'}`
+      : 'Ninguna matrícula';
+    $('#btn-xml').disabled = n === 0;
+  }
+
+  function generarXml() {
+    try {
+      const f = state.filtrosXml;
+      const conservar = state.model.matriculas.map((m) => cumpleFiltros(m, f));
+      const esperadas = conservar.filter(Boolean).length;
+      const texto = Matriculas.recortarXml(state.xml.text, conservar);
+      // comprobación: el XML resultante se lee igual que el original y tiene las matrículas esperadas
+      if (Matriculas.parseMatriculas(texto, DOMParser).matriculas.length !== esperadas) {
+        throw new Error('el XML generado no contiene las matrículas esperadas.');
+      }
+      const bytes = Matriculas.codificarXml(texto, state.xml.encoding);
+      const sufijo = sufijoFiltros(f);
+      descargar(
+        new Blob([bytes], { type: 'application/xml' }),
+        `matriculas-${cursoAcademicoSlug()}${sufijo ? `-${sufijo}` : ''}.xml`
+      );
+    } catch (err) {
+      console.error(err);
+      mostrarError(`No se ha podido generar el XML: ${err.message || err}`);
     }
   }
 
@@ -514,11 +608,7 @@
 
     // listado
     const onFiltro = () => {
-      state.filtros.ciclo = $('#f-ciclo').value;
-      state.filtros.curso = $('#f-curso').value;
-      state.filtros.turno = $('#f-turno').value;
-      state.filtros.grupo = $('#f-grupo').value;
-      rellenarGrupos();
+      leerFiltros('f', state.filtros);
       renderListado();
     };
     ['#f-ciclo', '#f-curso', '#f-grupo', '#f-turno'].forEach((s) => $(s).addEventListener('change', onFiltro));
@@ -533,7 +623,7 @@
     $('#btn-limpiar').addEventListener('click', () => {
       state.filtros = { ciclo: '', curso: '', grupo: '', turno: '', q: '' };
       $('#f-q').value = '';
-      rellenarFiltros();
+      rellenarFiltros('f', state.filtros);
       renderListado();
     });
     $('#tabla-alumnos thead').addEventListener('click', (e) => {
@@ -550,6 +640,20 @@
       $('#btn-columnas').setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
     });
     $('#btn-xlsx').addEventListener('click', generarXlsx);
+
+    // exportar XML
+    ['#x-ciclo', '#x-curso', '#x-grupo', '#x-turno'].forEach((s) =>
+      $(s).addEventListener('change', () => {
+        leerFiltros('x', state.filtrosXml);
+        renderXml();
+      })
+    );
+    $('#btn-xml-limpiar').addEventListener('click', () => {
+      state.filtrosXml = { ciclo: '', curso: '', grupo: '', turno: '' };
+      rellenarFiltros('x', state.filtrosXml);
+      renderXml();
+    });
+    $('#btn-xml').addEventListener('click', generarXml);
 
     renderColChooser();
   }

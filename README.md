@@ -11,6 +11,9 @@ y sin enviar datos a ningún servidor, permite descargar:
   matrícula (ciclo, curso, grupo, turno, datos personales, contacto, tutores…), con
   autofiltro y cabecera fija para ordenar desde Excel. Incluye además las hojas
   «Grupos» (resumen por grupo) y «Módulos» (una fila por alumno y módulo).
+- **XML filtrado**: el mismo `matriculas.xml` de Stylus (misma estructura y codificación)
+  pero solo con las matrículas del ciclo, curso, grupo y/o turno elegidos, para cargarlo
+  en otras aplicaciones que no permiten filtrar por esos campos.
 
 En pantalla, el listado se puede **filtrar** (ciclo, curso, grupo, turno, búsqueda libre)
 y **ordenar** pulsando en cualquier cabecera; el Excel respeta el filtro y el orden actual.
@@ -21,6 +24,7 @@ y **ordenar** pulsando en cualquier cabecera; el Excel respeta el filtro y el or
 2. Arrastrar `matriculas.xml` sobre la zona de carga o pulsar «Elegir archivo».
 3. Pestaña **Hojas de asistencia**: marcar los grupos y «Descargar PDF».
 4. Pestaña **Listado completo**: filtrar/ordenar y «Descargar Excel».
+5. Pestaña **Exportar XML**: elegir ciclo, curso, grupo y/o turno y «Descargar XML».
 
 Si algún alumno viene **sin grupo** en Stylus, aparece un aviso para asignarle uno; la
 asignación se recuerda en el navegador (no en ningún servidor).

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Listados de matrícula · Secretaría · Centro Didáctico</title>
-  <meta name="description" content="Herramienta de Secretaría: genera hojas de asistencia en PDF y listados en Excel a partir del matriculas.xml de Stylus. Todo se procesa en el navegador.">
+  <meta name="description" content="Herramienta de Secretaría: genera hojas de asistencia en PDF, listados en Excel y XML filtrados a partir del matriculas.xml de Stylus. Todo se procesa en el navegador.">
   <link rel="icon" type="image/png" href="assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,7 +49,7 @@
         <div>
           <span class="eyebrow">Secretaría · Stylus</span>
           <h1>Listados de matrícula <em>en un clic</em></h1>
-          <p class="page-hero__lead">Arrastra el fichero <code>matriculas.xml</code> exportado desde Stylus y descarga las hojas de asistencia semanal en PDF o el listado completo del alumnado en Excel.</p>
+          <p class="page-hero__lead">Arrastra el fichero <code>matriculas.xml</code> exportado desde Stylus y descarga las hojas de asistencia semanal en PDF, el listado completo del alumnado en Excel o un XML con solo el grupo que necesites.</p>
           <div class="hero__features">
             <div class="feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
@@ -58,6 +58,10 @@
             <div class="feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3z"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>
               <span>Listado completo ordenable y filtrable <span>· exportable a Excel con autofiltro</span></span>
+            </div>
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>
+              <span>XML filtrado por ciclo, curso, grupo o turno <span>· mismo formato de Stylus para otras aplicaciones</span></span>
             </div>
             <div class="feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
@@ -104,6 +108,10 @@
         <button type="button" role="tab" class="tab" data-tab="listado" aria-selected="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3z"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>
           Listado completo
+        </button>
+        <button type="button" role="tab" class="tab" data-tab="xml" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>
+          Exportar XML
         </button>
       </nav>
 
@@ -176,6 +184,41 @@
           </table>
         </div>
         <p class="hint">Pulsa en una cabecera para ordenar (segunda pulsación: orden inverso). El Excel respeta el filtro y el orden actual e incluye además las hojas «Grupos» y «Módulos».</p>
+      </section>
+
+      <!-- Exportar XML filtrado -->
+      <section id="tab-xml" class="tab-panel panel" role="tabpanel" hidden>
+        <div class="toolbar">
+          <label class="field"><span>Ciclo</span><select id="x-ciclo"><option value="">Todos</option></select></label>
+          <label class="field"><span>Curso</span><select id="x-curso"><option value="">Todos</option></select></label>
+          <label class="field"><span>Grupo</span><select id="x-grupo"><option value="">Todos</option></select></label>
+          <label class="field"><span>Turno</span><select id="x-turno"><option value="">Todos</option></select></label>
+        </div>
+        <div class="toolbar toolbar--center">
+          <span class="count" id="xml-count"></span>
+          <button class="btn btn--outline btn--xs" id="btn-xml-limpiar" type="button">Limpiar filtros</button>
+          <span class="spacer"></span>
+          <button class="btn btn--accent" id="btn-xml" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4M5 20h14"/></svg>
+            Descargar XML
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table id="tabla-xml" class="tabla">
+            <thead>
+              <tr>
+                <th>Clave</th>
+                <th>Ciclo formativo</th>
+                <th>Curso</th>
+                <th>Grupo</th>
+                <th>Turno</th>
+                <th class="num">Alumnos</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="hint">Descarga un <code>matriculas.xml</code> con el mismo formato y codificación que el de Stylus, pero solo con las matrículas que cumplen el filtro, para usarlo en otras aplicaciones. La tabla muestra los grupos que incluirá. Los alumnos con grupo asignado a mano aquí se filtran por ese grupo, pero en el XML conservan los datos originales de Stylus.</p>
       </section>
     </section>
   </main>
